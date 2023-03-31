@@ -1,43 +1,44 @@
-from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import Optional
-
-import uuid
-
-from fastapi_users import schemas
+from pydantic import BaseModel, EmailStr
 
 
-class UserRead(schemas.BaseUser[uuid.UUID]):
-    pass
+class UserBase(BaseModel):
+    email: str
 
 
-class UserCreate(schemas.BaseUserCreate):
-    pass
-
-
-class UserUpdate(schemas.BaseUserUpdate):
-    pass
-
-class UserSchema(BaseModel):
-    id: int = None
-    username: Optional[str]
+class UserCreate(UserBase):
     password: str
-    mail: Optional[str]
+
+
+class User(UserBase):
+    id: int
+    is_active: bool
 
     class Config:
         orm_mode = True
 
+
 class UserAuth(BaseModel):
-    username: str
+    email: str
     password: str
-    email: EmailStr
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    useremail: str | None = None
 
 
 class MessageSchema(BaseModel):
-    from_user: int
-    to_user: int
     content: str
     date: datetime = None
+
+    class Config:
+        orm_mode = True
 
 
 class MessageList(BaseModel):

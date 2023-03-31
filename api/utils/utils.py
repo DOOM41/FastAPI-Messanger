@@ -1,43 +1,74 @@
-from passlib.context import CryptContext
-import os
 from datetime import datetime, timedelta
-from typing import Union, Any
-from jose import jwt
+from typing import Annotated
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 30  # 30 minutes
-REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
-ALGORITHM = "HS256"
-JWT_SECRET_KEY = '123'     # should be kept secret
-JWT_REFRESH_SECRET_KEY = '123'      # should be kept secret
+from fastapi import Depends, HTTPException, status
+from database.db import SessionLocal
 
-password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from database.models import User
+
+from ..schemas.schemas import TokenData
+from ..controllers.main import (
+    ALGORITHM,
+    SECRET_KEY,
+    pwd_context,
+    oauth2_scheme,
+    get_db
+)
+from database import crud
+from jose import JWTError, jwt
 
 
-def get_hashed_password(password: str) -> str:
-    return password_context.hash(password)
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
 
 
-def verify_password(password: str, hashed_pass: str) -> bool:
-    return password_context.verify(password, hashed_pass)
+def get_password_hash(password):
+    return pwd_context.hash(password)
 
 
-def create_access_token(subject: Union[str, Any], expires_delta: int = None) -> str:
-    if expires_delta is not None:
-        expires_delta = datetime.utcnow() + expires_delta
+def authenticate_user(db, email: int, password: str):
+    user = crud.get_user_by_email(db, email)
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    return user
+
+
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
     else:
-        expires_delta = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-
-    to_encode = {"exp": expires_delta, "sub": str(subject)}
-    encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, ALGORITHM)
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 
-def create_refresh_token(subject: Union[str, Any], expires_delta: int = None) -> str:
-    if expires_delta is not None:
-        expires_delta = datetime.utcnow() + expires_delta
-    else:
-        expires_delta = datetime.utcnow() + timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
+async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        useremail: str = payload.get("sub")
+        if useremail is None:
+            raise credentials_exception
+        token_data = TokenData(useremail=useremail)
+    except JWTError:
+        raise credentials_exception
+    user = crud.get_user_by_email(SessionLocal(), token_data.useremail)
+    if user is None:
+        raise credentials_exception
+    return user
 
-    to_encode = {"exp": expires_delta, "sub": str(subject)}
-    encoded_jwt = jwt.encode(to_encode, JWT_REFRESH_SECRET_KEY, ALGORITHM)
-    return encoded_jwt
+
+async def get_current_active_user(
+    current_user: Annotated[User, Depends(get_current_user)]
+):
+    if not current_user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user

@@ -2,47 +2,53 @@ from .main import (
     app,
 )
 from .messages import send_message, get_message
-from fastapi import Depends
+from . import user
+from ..schemas import schemas
 
-from database.models import User, create_db_and_tables
-from ..schemas.schemas import UserCreate, UserRead, UserUpdate
-from database.users import auth_backend, current_active_user, fastapi_users
-
-
-app.include_router(
-    fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
+app.add_api_route(
+    '/users',
+    user.create_user,
+    methods=['post'],
+    response_model=schemas.User,
+    tags=['user']
 )
-app.include_router(
-    fastapi_users.get_register_router(UserRead, UserCreate),
-    prefix="/auth",
-    tags=["auth"],
+app.add_api_route(
+    '/users/login',
+    user.login_for_access_token,
+    methods=['post'],
+    response_model=schemas.Token,
+    tags=['user']
 )
-app.include_router(
-    fastapi_users.get_reset_password_router(),
-    prefix="/auth",
-    tags=["auth"],
+app.add_api_route(
+    '/users/me',
+    user.read_users_me,
+    methods=['get'],
+    response_model=schemas.User,
+    tags=['user']
 )
-app.include_router(
-    fastapi_users.get_verify_router(UserRead),
-    prefix="/auth",
-    tags=["auth"],
+app.add_api_route(
+    '/users/{chat_id}',
+    user.read_user,
+    methods=['get'],
+    response_model=schemas.User,
+    tags=['user']
 )
-app.include_router(
-    fastapi_users.get_users_router(UserRead, UserUpdate),
-    prefix="/users",
-    tags=["users"],
+app.add_api_route(
+    '/users',
+    user.read_users,
+    methods=['get'],
+    response_model=list[schemas.User],
+    tags=['user']
 )
 
 
-@app.get("/authenticated-route")
-async def authenticated_route(user: User = Depends(current_active_user)):
-    return {"message": f"Hello {user.email}!"}
-
-
-@app.on_event("startup")
-async def on_startup():
-    # Not needed if you setup a migration system like Alembic
-    await create_db_and_tables()
-
-app.add_api_route('/send_message', send_message, methods=['post'])
-app.add_api_route('/get_my_mes', get_message, methods=['get'])
+app.add_api_route(
+    '/send_message/{to_user_id}',
+    send_message,
+    methods=['post']
+)
+app.add_api_route(
+    '/get_my_mes',
+    get_message,
+    methods=['get']
+)
