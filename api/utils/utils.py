@@ -12,7 +12,6 @@ from ..controllers.main import (
     SECRET_KEY,
     pwd_context,
     oauth2_scheme,
-    get_db
 )
 from database import crud
 from jose import JWTError, jwt

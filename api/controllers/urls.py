@@ -1,9 +1,10 @@
 from .main import (
     app,
 )
-from .messages import send_message, get_message
-from . import user
 from ..schemas import schemas
+
+from . import messages
+from . import user
 
 app.add_api_route(
     '/users',
@@ -27,7 +28,7 @@ app.add_api_route(
     tags=['user']
 )
 app.add_api_route(
-    '/users/{chat_id}',
+    '/users/{user_id}',
     user.read_user,
     methods=['get'],
     response_model=schemas.User,
@@ -42,13 +43,30 @@ app.add_api_route(
 )
 
 
+
 app.add_api_route(
-    '/send_message/{to_user_id}',
-    send_message,
-    methods=['post']
+    '/chat/{user_id}',
+    messages.create_chat,
+    methods=['post'],
+    tags=['chats']
 )
 app.add_api_route(
-    '/get_my_mes',
-    get_message,
-    methods=['get']
+    '/chat/my',
+    messages.get_own_chats,
+    methods=['get'],
+    tags=['chats']
+)
+
+app.add_api_route(
+    '/send_message/{chat_id}',
+    messages.send_message,
+    methods=['post'],
+    tags=['messages']
+)
+
+app.add_api_route(
+    '/get_data/{chat_id}',
+    messages.get_messages,
+    methods=['get'],
+    tags=['messages']
 )

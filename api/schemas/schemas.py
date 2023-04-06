@@ -1,6 +1,6 @@
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, EmailStr
+from typing import List
+from pydantic import BaseModel, EmailStr, validator
 
 
 class UserBase(BaseModel):
@@ -33,13 +33,44 @@ class TokenData(BaseModel):
     useremail: str | None = None
 
 
-class MessageSchema(BaseModel):
-    content: str
-    date: datetime = None
+class MinUser(BaseModel):
+    id: int
+    email: str
+
+
+class ChatSchema(BaseModel):
+    id: int
+    from_user: MinUser
+    to_user: MinUser
 
     class Config:
         orm_mode = True
 
+    @validator('from_user', 'to_user', pre=True)
+    def parse_from_user(cls, value):
+        return MinUser(id=value.id, email=value.email)
+
+
+class ChatList(BaseModel):
+    chats: List[ChatSchema]
+
+class MessageSchema(BaseModel):
+    content: str
+    date: datetime = None
+
+class MessageReadSchema(BaseModel):
+    chat_id: int
+    content: str
+    date: datetime = None
+    from_user: MinUser
+
+    class Config:
+        orm_mode = True
+
+    @validator('from_user', pre=True)
+    def parse_from_user(cls, value):
+        return MinUser(id=value.id, email=value.email)
+
 
 class MessageList(BaseModel):
-    users: list[MessageSchema]
+    messages: List[MessageReadSchema]

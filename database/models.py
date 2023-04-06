@@ -3,9 +3,9 @@ from .db import (
     Base,
     engine
 )
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey, Table
 from sqlalchemy.sql.functions import current_timestamp
-from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import Mapped, relationship
 
 
 class User(Base):
@@ -17,17 +17,15 @@ class User(Base):
     is_active = Column(Boolean, default=True)
 
 class Chat(Base):
-    __tablename__ = 'chats'
+    __tablename__ = "chats"
 
     id = Column(Integer, primary_key=True, index=True)
-    from_user_id = Column('from_user_id', ForeignKey('users.id'))
-    to_user_id = Column('to_user_id', ForeignKey('users.id'))
+    from_id = Column('from_id', ForeignKey('users.id'))
+    to_id = Column('to_id', ForeignKey('users.id'))
 
-    def __init__(self, from_user_id: int, to_user_id: int, content: str, date: datetime = datetime.now()):
-        self.from_user_id = from_user_id
-        self.to_user_id = to_user_id
-        self.content = content
-        self.date = date
+    from_user = relationship("User", foreign_keys=[from_id])
+    to_user = relationship("User", foreign_keys=[to_id])
+
 
 class Message(Base):
     __tablename__ = 'messages'
@@ -43,10 +41,13 @@ class Message(Base):
         nullable=False,
         server_default=current_timestamp(),
     )
+    
+    from_user = relationship("User", foreign_keys=[from_user_id])
+    chat = relationship("Chat")
 
-    def __init__(self, from_user_id: int, to_user_id: int, content: str, date: datetime = datetime.now()):
+    def __init__(self, from_user_id: int, chat_id: int, content: str, date: datetime = datetime.now()):
         self.from_user_id = from_user_id
-        self.to_user_id = to_user_id
+        self.chat_id = chat_id
         self.content = content
         self.date = date
 

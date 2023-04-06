@@ -1,8 +1,11 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_
 
 from . import models
 from api.schemas import schemas
 from api.controllers.main import pwd_context
+
+# User
 
 
 def get_user(db: Session, user_id: int):
@@ -28,23 +31,57 @@ def create_user(db: Session, user: schemas.UserCreate):
     db.refresh(db_user)
     return db_user
 
+# Chats
 
-def get_messages(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Message).offset(skip).limit(limit).all()
+
+def create_chat(db: Session, from_c: models.User, to_c: models.User):
+    db_chat = models.Chat(
+        from_id=from_c,
+        to_id=to_c
+    )
+    db.add(db_chat)
+    db.commit()
+    db.refresh(db_chat)
+    return db_chat
+
+
+def get_chat(db: Session, chat_id: int):
+    return db.query(models.Chat).filter(models.Chat.id == chat_id).first()
+
+
+def get_chats_by_user(db: Session, user: models.User):
+    return db.query(models.Chat).options(
+        joinedload(models.Chat.from_user),
+        joinedload(models.Chat.to_user)
+    ).filter(or_(
+        models.Chat.from_user == user,
+        models.Chat.to_user == user,
+    )).all()
+
+# Messages
 
 
 def create_user_message(
     db: Session,
     mess: schemas.MessageSchema,
-    user_id: int,
-    chat_id: int
+    chat_id: int,
+    user_id: int
 ):
     db_item = models.Message(
         **mess.dict(),
-        from_user_id=user_id,
-        chat_id=chat_id
+        chat_id=chat_id,
+        from_user_id=user_id.id
     )
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
     return db_item
+
+
+def get_messages_by_chat_id(db: Session, chat_id):
+    return db.query(models.Message)\
+        .options(
+            joinedload(models.Message.from_user)
+    ).filter(
+        models.Message.chat_id == chat_id
+    ).all()
