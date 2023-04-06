@@ -1,38 +1,28 @@
 from datetime import datetime
-from .db import (
-    Base,
-    engine
-)
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey, Table
-from sqlalchemy.sql.functions import current_timestamp
+
+from sqlalchemy import DateTime, ForeignKey, Table, Column, Integer, String, TIMESTAMP, MetaData
 from sqlalchemy.orm import Mapped, relationship
+from sqlalchemy.sql.functions import current_timestamp
+from auth.models import Base
 
-
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    is_active = Column(Boolean, default=True)
 
 class Chat(Base):
-    __tablename__ = "chats"
+    __tablename__ = "chat"
 
     id = Column(Integer, primary_key=True, index=True)
-    from_id = Column('from_id', ForeignKey('users.id'))
-    to_id = Column('to_id', ForeignKey('users.id'))
+    from_id = Column('from_id', ForeignKey('user.id'))
+    to_id = Column('to_id', ForeignKey('user.id'))
 
     from_user = relationship("User", foreign_keys=[from_id])
     to_user = relationship("User", foreign_keys=[to_id])
 
 
 class Message(Base):
-    __tablename__ = 'messages'
+    __tablename__ = 'message'
 
     id: Mapped[int] = Column(Integer, primary_key=True, index=True)
-    from_user_id = Column('from_user_id', ForeignKey('users.id'))
-    chat_id = Column('chat_id', ForeignKey('chats.id'))
+    from_user_id = Column('from_user_id', ForeignKey('user.id'))
+    chat_id = Column('chat_id', ForeignKey('chat.id'))
     content = Column('content', String(256))
     date = Column(
         'date',
@@ -41,7 +31,7 @@ class Message(Base):
         nullable=False,
         server_default=current_timestamp(),
     )
-    
+
     from_user = relationship("User", foreign_keys=[from_user_id])
     chat = relationship("Chat")
 
@@ -53,9 +43,6 @@ class Message(Base):
 
     def __str__(self):
         return str(self.id) + \
-            ':user_id -> ' + str(self.user_id) + \
+            ':user_id -> ' + str(self.from_user_id) + \
             ', content -> ' + self.content + \
             ', date -> ' + self.date.strftime('%Y%m%d - %H:%M:%S')
-
-
-Base.metadata.create_all(bind=engine)
