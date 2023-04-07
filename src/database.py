@@ -4,7 +4,6 @@ from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from auth import models as a_models
 from chats import models as c_models
 
 DATABASE_URL = "sqlite+aiosqlite:///./test.db"
