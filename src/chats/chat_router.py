@@ -1,12 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, WebSocket
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_async_session
 
 from auth import schemas
-from auth.base_config import current_user
+from auth.base_config import current_user,get_current_user
 from auth.crud import get_user
 
 from chats import crud, models
@@ -70,6 +70,41 @@ async def get_messages(
     return MessageList(messages=messages)
 
 
+@router.websocket("/ws/{chat_id}")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    chat_id: int,
+    session: AsyncSession = Depends(get_async_session)
+):
+    breakpoint()
+    await websocket.accept()
+    token = await websocket.receive()
+    current_user = get_current_user(token)
+    await check_user_in_chat(session, current_user, chat_id)
+    while True:
+        data: MessageSendSchema = await websocket.receive_json()
+        message = await crud.create_user_message(
+            db=session,
+            mess=data,
+            chat_id=chat_id,
+            user=current_user
+        )
+        messages = await crud.get_messages_by_chat_id(
+            session,
+            chat_id
+        )
+        await websocket.send_json(
+            message
+        )
+
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        await websocket.send_text(f"Message text was: {data}")
+
+
 @router.post("/{chat_id}/send_message")
 async def send_messages(
     current_user: Annotated[schemas.UserRead, Depends(current_user)],
@@ -82,6 +117,6 @@ async def send_messages(
         db=session,
         mess=mess,
         chat_id=chat_id,
-        user_id=current_user
+        user=current_user
     )
     return {'res': 'sended'}

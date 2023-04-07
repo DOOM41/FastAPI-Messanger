@@ -81,7 +81,7 @@ async def create_user_message(
     db_message = models.Message(
         **mess.dict(),
         chat_id=chat_id,
-        from_user_id=user.id
+        from_user=user
     )
     db.add(db_message)
     await db.commit()
