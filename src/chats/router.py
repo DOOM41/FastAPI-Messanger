@@ -14,7 +14,7 @@ router = APIRouter(
 )
 
 
-@router.get("/")
+@router.post("/")
 async def create_chat(
     now_user: Annotated[schemas.UserRead, Depends(current_user)],
     user_id,
@@ -33,6 +33,17 @@ async def create_chat(
         user_id
     )
     return chat
+
+@router.get("/my")
+async def get_own_chats(
+    current_user: Annotated[schemas.UserRead, Depends(current_user)],
+    session: AsyncSession = Depends(get_async_session)
+):
+    chats = await crud.get_chats_by_user(
+        db=session,
+        user=current_user
+    )
+    return chats
 
 
 # @router.post("/")

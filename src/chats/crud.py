@@ -32,7 +32,7 @@ async def get_chat(db: AsyncSession, chat_id: int):
 async def get_chats_by_user(
     db: AsyncSession,
     user: User,
-    user_id: int
+    user_id: int = 0
 ):
     # breakpoint()
     statement = select(models.Chat).options(
@@ -43,4 +43,4 @@ async def get_chats_by_user(
         models.Chat.to_user == user,
     ))
     result = await db.execute(statement)
-    return result.scalars.all()
+    return result.scalars().all()
