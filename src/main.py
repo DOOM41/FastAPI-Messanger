@@ -4,7 +4,8 @@ from fastapi import FastAPI
 from auth.base_config import auth_backend, fastapi_users
 from auth.schemas import UserRead, UserCreate, UserUpdate
 
-from chats.router import router as router_operation
+from chats.chat_router import router as router_chats
+from chats.message_roter import router as router_messages
 
 import uvicorn
 
@@ -15,7 +16,9 @@ app = FastAPI(
 )
 
 app.include_router(
-    fastapi_users.get_auth_router(auth_backend),
+    fastapi_users.get_auth_router(
+        auth_backend
+    ),
     prefix="/auth",
     tags=["Auth"],
 )
@@ -35,7 +38,8 @@ app.include_router(
     tags=["users"],
 )
 
-app.include_router(router_operation)
+app.include_router(router_chats)
+app.include_router(router_messages)
 
 if __name__ == '__main__':
     asyncio.run(create_db_and_tables())

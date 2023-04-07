@@ -1,4 +1,5 @@
 import requests
+from pprint import pprint
 
 tok = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiYXVkIjpbImZhc3RhcGktdXNlcnM6YXV0aCJdLCJleHAiOjE2ODA4NDkxOTV9.VcHJ7QfIxRA1gMj9EVCUWLhMqV0xxKGKnamdLBhDHA4'
 
@@ -17,4 +18,4 @@ a = requests.get(
     },
 )
 
-print(a.json())
+pprint(a.json())
