@@ -4,6 +4,7 @@ from sqlalchemy import DateTime, ForeignKey, Table, Column, Integer, String, TIM
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.sql.functions import current_timestamp
 from auth.models import Base
+from auth.models import User
 
 
 class Chat(Base):
@@ -35,8 +36,8 @@ class Message(Base):
     from_user = relationship("User", foreign_keys=[from_user_id])
     chat = relationship("Chat")
 
-    def __init__(self, from_user_id: int, chat_id: int, content: str, date: datetime = datetime.now()):
-        self.from_user_id = from_user_id
+    def __init__(self, from_user: User, chat_id: int, content: str, date: datetime = datetime.now()):
+        self.from_user = from_user
         self.chat_id = chat_id
         self.content = content
         self.date = date
@@ -46,3 +47,5 @@ class Message(Base):
             ':user_id -> ' + str(self.from_user_id) + \
             ', content -> ' + self.content + \
             ', date -> ' + self.date.strftime('%Y%m%d - %H:%M:%S')
+
+

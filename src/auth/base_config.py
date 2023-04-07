@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from fastapi_users import FastAPIUsers
 from fastapi_users.authentication import BearerTransport, AuthenticationBackend
 from fastapi_users.authentication import JWTStrategy
@@ -23,3 +24,10 @@ fastapi_users = FastAPIUsers[User, int](
 )
 
 current_user = fastapi_users.current_user()
+
+async def get_current_user(token: str):
+    try:
+        user = await get_jwt_strategy().get_current_user(token=token)
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+    return user
