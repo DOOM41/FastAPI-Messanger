@@ -7,22 +7,28 @@ from chats import models
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-async def create_chat(db: AsyncSession, from_c: User, to_c: User):
+async def create_chat(
+        db: AsyncSession, from_c: User, to_c: User
+) -> models.Chat:
     db_chat = models.Chat(
         from_id=from_c,
         to_id=to_c
     )
     db.add(db_chat)
-    db.commit()
+    await db.commit()
     db.refresh(db_chat)
     return db_chat
 
 
-def get_chat(db: AsyncSession, chat_id: int):
-    return db.s(models.Chat).filter(models.Chat.id == chat_id).first()
+async def get_chat(db: AsyncSession, chat_id: int):
+    breakpoint()
+    return await db(models.Chat).filter(
+        models.Chat.id == chat_id
+    ).first()
 
 
-def get_chats_by_user(db: Session, user: User):
+async def get_chats_by_user(db: AsyncSession, user: User):
+    breakpoint()
     return db.query(models.Chat).options(
         joinedload(models.Chat.from_user),
         joinedload(models.Chat.to_user)
