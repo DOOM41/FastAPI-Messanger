@@ -20,9 +20,10 @@ async def create_chat(
     user_id,
     session: AsyncSession = Depends(get_async_session)
 ):
-    chats =  crud.get_chats_by_user(
+    chats = await crud.get_chats_by_user(
         db=session,
-        user=now_user
+        user=now_user,
+        user_id=user_id
     )
     if chats:
         return {"res": 'existed'}
