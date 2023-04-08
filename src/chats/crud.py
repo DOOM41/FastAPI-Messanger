@@ -79,13 +79,13 @@ async def create_user_message(
     user: User
 ):
     db_message = models.Message(
-        **mess.dict(),
+        content=mess['content'],
         chat_id=chat_id,
         from_user=user
     )
     db.add(db_message)
     await db.commit()
-    db.refresh(db_message)
+    await db.refresh(db_message)
     return db_message
 
 

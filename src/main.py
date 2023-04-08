@@ -1,5 +1,4 @@
 import asyncio
-import socketio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -55,14 +54,6 @@ app.include_router(
 )
 
 
-sio = socketio.Server(async_mode='asgi')
-app.mount('/socket.io', socketio.ASGIApp(sio))
-@sio.on('message')
-async def handle_message(sid, data):
-    print('Received message:', data)
-    await sio.emit('response', 'Received message: ' + data)
-
-
 app.include_router(router_chats)
 app.include_router(router_messages)
 
@@ -70,5 +61,4 @@ if __name__ == '__main__':
     asyncio.run(create_db_and_tables())
     uvicorn.run(
         app,
-        host='172.28.0.224',
     )

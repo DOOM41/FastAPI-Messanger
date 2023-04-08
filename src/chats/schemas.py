@@ -32,6 +32,10 @@ class MessageSendSchema(BaseModel):
     content: str
     date: datetime = None
 
+class MessageSenddSchema(BaseModel):
+    content: str
+    date: datetime = None
+    from_user: int
 
 class MessageReadSchema(BaseModel):
     chat_id: int
