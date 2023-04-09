@@ -17,6 +17,7 @@ app = FastAPI(
 )
 
 
+
 origins = [
     "*",
 ]
@@ -50,7 +51,6 @@ app.include_router(
     fastapi_users.get_users_router(UserRead, UserUpdate),
     prefix="/users",
     tags=["users"],
-    #Хуй
 )
 
 
@@ -61,4 +61,5 @@ if __name__ == '__main__':
     asyncio.run(create_db_and_tables())
     uvicorn.run(
         app,
+        host='172.28.0.136'
     )

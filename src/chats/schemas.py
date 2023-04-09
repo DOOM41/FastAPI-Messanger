@@ -30,12 +30,12 @@ class ChatList(BaseModel):
 
 class MessageSendSchema(BaseModel):
     content: str
-    date: datetime = None
+    date_stamp: float
 
 class MessageSenddSchema(BaseModel):
     content: str
     date: datetime = None
-    from_user: int
+    from_user_id: int
 
 class MessageReadSchema(BaseModel):
     chat_id: int

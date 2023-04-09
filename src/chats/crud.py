@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, select, and_
+from sqlalchemy import or_, select, and_,delete
 
 from auth.models import User
 from chats import models
@@ -100,3 +100,31 @@ async def get_messages_by_chat_id(
     )
     result = await db.execute(statement)
     return result.scalars().all()
+
+
+async def create_client(db: AsyncSession, chat_id: int, address):
+    db_client = models.Client(
+        chat_id=chat_id,
+        address=address
+    )
+    db.add(db_client)
+    await db.commit()
+    await db.refresh(db_client)
+    await db.commit()
+    return db_client
+
+
+async def get_clients(db: AsyncSession, chat_id: int):
+    statement = select(models.Client).filter(
+        models.Client.chat_id == chat_id
+    )
+    result = await db.execute(statement)
+    return result.scalars().all()
+
+async def delete_client(db: AsyncSession, id: int):
+    statement = delete(models.Client).where(
+        models.Client.id == id
+    )
+    result = await db.execute(statement)
+    await db.commit()
+    return result

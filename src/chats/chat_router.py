@@ -1,6 +1,7 @@
+import json
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, WebSocket
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_async_session
@@ -14,6 +15,7 @@ from chats.schemas import ChatList, MessageList, MessageSendSchema
 from chats.utils import check_user_in_chat
 from chats.schemas import MessageSenddSchema
 
+from chats.conections import manager
 
 router = APIRouter(
     prefix="/chat",
@@ -74,27 +76,34 @@ async def get_messages(
 @router.websocket("/ws/{chat_id}")
 async def websocket_endpoint(
     websocket: WebSocket,
-    current_user: Annotated[schemas.UserRead, Depends(current_user)],
     chat_id: int,
     session: AsyncSession = Depends(get_async_session)
 ):
-    breakpoint()
-    await websocket.accept()
-    while True:
-        data: MessageSenddSchema = await websocket.receive_json()
-        user = await get_user(
-            session,
-            data['from_user']
-        )
-        message = await crud.create_user_message(
-            db=session,
-            mess=data,
-            chat_id=chat_id,
-            user=user
-        )
-        await websocket.send_json(
-            MessageSendSchema(content=message.content).json()
-        )
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            user = await get_user(
+                session,
+                data['from_user_id']
+            )
+            message = await crud.create_user_message(
+                db=session,
+                mess=data,
+                chat_id=chat_id,
+                user=user
+            )
+            new_data = MessageSendSchema(
+                content=message.content,
+                date_stamp=message.date.timestamp()
+            ).dict()
+            await manager.send_not_message(
+                new_data,
+                websocket
+            )
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        await manager.broadcast(f"Client #{chat_id} left the chat")
 
 
 @router.websocket("/ws")
