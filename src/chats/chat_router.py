@@ -1,4 +1,3 @@
-import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
@@ -7,13 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_async_session
 
 from auth import schemas
-from auth.base_config import current_user, get_current_user
+from auth.base_config import current_user
 from auth.crud import get_user
 
-from chats import crud, models
+from chats import crud
 from chats.schemas import ChatList, MessageList, MessageSendSchema
 from chats.utils import check_user_in_chat
-from chats.schemas import MessageSenddSchema
 
 from chats.conections import manager
 
@@ -105,27 +103,3 @@ async def websocket_endpoint(
         manager.disconnect(websocket)
         await manager.broadcast(f"Client #{chat_id} left the chat")
 
-
-@router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    while True:
-        data = await websocket.receive_text()
-        await websocket.send_text(f"Message text was: {data}")
-
-
-@router.post("/{chat_id}/send_message")
-async def send_messages(
-    current_user: Annotated[schemas.UserRead, Depends(current_user)],
-    chat_id: int,
-    mess: MessageSendSchema,
-    session: AsyncSession = Depends(get_async_session)
-):
-    await check_user_in_chat(session, current_user, chat_id)
-    message = await crud.create_user_message(
-        db=session,
-        mess=mess,
-        chat_id=chat_id,
-        user=current_user
-    )
-    return {'res': 'sended'}
