@@ -10,3 +10,8 @@ async def get_user(db: AsyncSession, id: int):
     )
     result = await db.execute(statement)
     return result.scalars().first()
+
+async def get_users(db: AsyncSession, skip: int = 0, limit: int = 100):
+    statement = select(User).offset(skip).limit(limit)
+    result = await db.execute(statement)
+    return result.scalars().all()

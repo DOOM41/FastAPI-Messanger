@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_async_session
@@ -11,7 +11,7 @@ from auth.crud import get_user
 
 from chats import crud
 from chats.schemas import ChatList, MessageList, MessageSendSchema
-from chats.utils import check_user_in_chat
+from chats.utils import check_user_in_chat, check_user_in_chat_ws
 
 from chats.conections import manager
 
@@ -78,30 +78,41 @@ async def websocket_endpoint(
     session: AsyncSession = Depends(get_async_session)
 ):
     await manager.connect(websocket)
+
     try:
         while True:
-            data = await websocket.receive_json()
+            message_f = await websocket.receive_json()
             user = await get_user(
                 session,
-                data['from_user_id']
+                message_f['from_user_id']
             )
-            message = await crud.create_user_message(
-                db=session,
-                mess=data,
-                chat_id=chat_id,
-                user=user
-            )
-            new_data = MessageSendSchema(
-                content=message.content,
-                date_stamp=message.date.timestamp()
-            ).dict()
-            await manager.send_not_message(
-                new_data,
-                websocket
-            )
+            if user:
+                check_res = await check_user_in_chat_ws(
+                    session, user, chat_id, websocket
+                )
+                if not check_res:
+                    continue
+                message = await crud.create_user_message(
+                    db=session,
+                    mess=message_f,
+                    chat_id=chat_id,
+                    user=user
+                )
+                new_data = MessageSendSchema(
+                    content=message.content,
+                    date_stamp=message.date.timestamp()
+                ).dict()
+                await manager.send_not_message(
+                    new_data,
+                )
+            else:
+                await manager.send_personal_message(
+                    "User id not found", websocket
+                )
     except WebSocketDisconnect:
-        await manager.send_not_message({'data': f"Client #{chat_id} left the chat"})
         manager.disconnect(websocket)
-    except Exception as e:
-        await manager.send_personal_message(f"Smth wrong {e}")
+    except HTTPException as e:
         manager.disconnect(websocket)
+        await manager.send_personal_message(
+            "This user not in this chat", websocket
+        )

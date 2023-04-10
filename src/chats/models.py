@@ -49,13 +49,3 @@ class Message(Base):
             ', date -> ' + self.date.strftime('%Y%m%d - %H:%M:%S')
             
 
-class Client(Base):
-    __tablename__ = 'clients'
-    
-    id: Mapped[int] = Column(Integer, primary_key=True, index=True)
-    address = Column('address', String(256))
-    chat_id = Column('chat_id', ForeignKey('chat.id'))
-    
-    chat = relationship("Chat")
-    
-
