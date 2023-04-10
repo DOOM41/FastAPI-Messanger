@@ -100,6 +100,8 @@ async def websocket_endpoint(
                 websocket
             )
     except WebSocketDisconnect:
+        await manager.send_not_message({'data': f"Client #{chat_id} left the chat"})
         manager.disconnect(websocket)
-        await manager.broadcast(f"Client #{chat_id} left the chat")
-
+    except Exception as e:
+        await manager.send_personal_message(f"Smth wrong {e}")
+        manager.disconnect(websocket)
