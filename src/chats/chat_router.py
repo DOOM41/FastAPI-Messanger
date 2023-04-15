@@ -11,8 +11,11 @@ from auth.crud import get_user
 
 from chats import crud
 from chats.schemas import ChatList, MessageList, MessageSendSchema
-from chats.utils import check_user_in_chat, check_user_in_chat_ws
-
+from chats.utils import (
+    check_user_in_chat,
+    check_user_in_chat_ws,
+    check_chat_existed
+)
 from chats.conections import manager
 
 router = APIRouter(
@@ -63,7 +66,9 @@ async def get_messages(
     chat_id: int,
     session: AsyncSession = Depends(get_async_session)
 ):
+    chat = await crud.get_chat(session, chat_id)
     await check_user_in_chat(session, current_user, chat_id)
+    await check_chat_existed(chat)
     messages = await crud.get_messages_by_chat_id(
         session,
         chat_id
@@ -77,38 +82,37 @@ async def websocket_endpoint(
     chat_id: int,
     session: AsyncSession = Depends(get_async_session)
 ):
+    # Connect ws
     await manager.connect(websocket)
+    first_data = await websocket.receive_json()
 
+    # Chekers
+    chat = await crud.get_chat(session, chat_id)
+    user = await get_user(
+        session,
+        first_data['from_user_id']
+    )
+    await check_user_in_chat(session, current_user, chat_id)
+    await check_chat_existed(chat, is_ws=True)
+    await check_user_in_chat_ws(
+        session, user, chat_id
+    )
     try:
         while True:
             message_f = await websocket.receive_json()
-            user = await get_user(
-                session,
-                message_f['from_user_id']
+            message = await crud.create_user_message(
+                db=session,
+                mess=message_f,
+                chat=chat,
+                user=user
             )
-            if user:
-                check_res = await check_user_in_chat_ws(
-                    session, user, chat_id, websocket
-                )
-                if not check_res:
-                    continue
-                message = await crud.create_user_message(
-                    db=session,
-                    mess=message_f,
-                    chat_id=chat_id,
-                    user=user
-                )
-                new_data = MessageSendSchema(
-                    content=message.content,
-                    date_stamp=message.date.timestamp()
-                ).dict()
-                await manager.send_not_message(
-                    new_data,
-                )
-            else:
-                await manager.send_personal_message(
-                    "User id not found", websocket
-                )
+            new_data = MessageSendSchema(
+                content=message.content,
+                date_stamp=message.date.timestamp()
+            ).dict()
+            await manager.send_not_message(
+                new_data,
+            )
     except WebSocketDisconnect:
         manager.disconnect(websocket)
     except HTTPException as e:

@@ -77,12 +77,12 @@ async def get_chats_by_user(
 async def create_user_message(
     db: Session,
     mess: dict,
-    chat_id: int,
+    chat: models.Chat,
     user: User
 ) -> models.Message:
     db_message = models.Message(
         content=mess['content'],
-        chat_id=chat_id,
+        chat_id=chat.id,
         from_user=user,
         date=datetime.fromtimestamp(mess['date_time']) if mess.get(
             "date_time") else datetime.now()
@@ -93,14 +93,14 @@ async def create_user_message(
     return db_message
 
 
-async def get_messages_by_chat_id(
+async def get_messages_by_chat(
         db: AsyncSession,
-        chat_id
+        chat: models.Chat
 ) -> list[models.Message]:
     statement = select(models.Message).options(
         joinedload(models.Message.from_user)
     ).filter(
-        models.Message.chat_id == chat_id
+        models.Message.chat == chat
     )
     result = await db.execute(statement)
     return result.scalars().all()
