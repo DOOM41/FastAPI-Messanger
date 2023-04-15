@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, WebSocketException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_async_session
@@ -67,7 +67,7 @@ async def get_messages(
     session: AsyncSession = Depends(get_async_session)
 ):
     chat = await crud.get_chat(session, chat_id)
-    await check_user_in_chat(session, current_user, chat_id)
+    await check_user_in_chat(current_user, chat)
     await check_chat_existed(chat)
     messages = await crud.get_messages_by_chat_id(
         session,
@@ -83,21 +83,18 @@ async def websocket_endpoint(
     session: AsyncSession = Depends(get_async_session)
 ):
     # Connect ws
-    await manager.connect(websocket)
+    await manager.connect(websocket, chat_id)
     first_data = await websocket.receive_json()
 
-    # Chekers
-    chat = await crud.get_chat(session, chat_id)
-    user = await get_user(
-        session,
-        first_data['from_user_id']
-    )
-    await check_user_in_chat(session, current_user, chat_id)
-    await check_chat_existed(chat, is_ws=True)
-    await check_user_in_chat_ws(
-        session, user, chat_id
-    )
     try:
+        chat = await crud.get_chat(session, chat_id)
+        user = await get_user(
+            session,
+            first_data['from_user_id']
+        )
+        check_user_in_chat(session, current_user, chat_id, is_ws=True)
+        check_chat_existed(chat, is_ws=True)
+        check_user_in_chat_ws(user, chat)
         while True:
             message_f = await websocket.receive_json()
             message = await crud.create_user_message(
@@ -110,13 +107,17 @@ async def websocket_endpoint(
                 content=message.content,
                 date_stamp=message.date.timestamp()
             ).dict()
-            await manager.send_not_message(
+            await manager.send_message_by_chats(
                 new_data,
+                chat_id
             )
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        manager.disconnect(websocket, chat_id)
     except HTTPException as e:
-        manager.disconnect(websocket)
         await manager.send_personal_message(
             "This user not in this chat", websocket
         )
+    except WebSocketException:
+        raise WebSocketException(400, "smth wrong")
+    finally:
+        manager.disconnect(websocket, chat_id)

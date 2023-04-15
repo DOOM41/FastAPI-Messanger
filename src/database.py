@@ -1,10 +1,9 @@
 from typing import AsyncGenerator
 
-from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from chats import models as c_models
+from chats import models as all_models
 
 DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
@@ -16,7 +15,7 @@ async_session_maker = sessionmaker(
 
 async def create_db_and_tables():
     async with engine.begin() as conn:
-        await conn.run_sync(c_models.Base.metadata.create_all, checkfirst=True)
+        await conn.run_sync(all_models.Base.metadata.create_all, checkfirst=True)
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
